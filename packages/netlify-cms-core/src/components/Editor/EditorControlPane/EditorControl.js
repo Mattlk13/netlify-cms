@@ -1,4 +1,5 @@
 import React from 'react';
+import { bindActionCreators } from 'redux';
 import PropTypes from 'prop-types';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import { translate } from 'react-polyglot';
@@ -7,16 +8,20 @@ import styled from '@emotion/styled';
 import { partial, uniqueId } from 'lodash';
 import { connect } from 'react-redux';
 import { FieldLabel, colors, transitions, lengths, borders } from 'netlify-cms-ui-default';
-import { resolveWidget, getEditorComponents } from 'Lib/registry';
-import { clearFieldErrors, loadEntry } from 'Actions/entries';
-import { addAsset, getAsset } from 'Actions/media';
-import { query, clearSearch } from 'Actions/search';
+import ReactMarkdown from 'react-markdown';
+
+import { resolveWidget, getEditorComponents } from '../../../lib/registry';
+import { clearFieldErrors, tryLoadEntry, validateMetaField } from '../../../actions/entries';
+import { addAsset, boundGetAsset } from '../../../actions/media';
+import { selectIsLoadingAsset } from '../../../reducers/medias';
+import { query, clearSearch } from '../../../actions/search';
 import {
   openMediaLibrary,
   removeInsertedMedia,
   clearMediaControl,
   removeMediaControl,
-} from 'Actions/mediaLibrary';
+  persistMedia,
+} from '../../../actions/mediaLibrary';
 import Widget from './Widget';
 
 /**
@@ -53,6 +58,14 @@ const styleStrings = {
   widgetError: `
     border-color: ${colors.errorText};
   `,
+  disabled: `
+    pointer-events: none;
+    opacity: 0.5;
+    background: #ccc;
+  `,
+  hidden: `
+    visibility: hidden;
+  `,
 };
 
 const ControlContainer = styled.div`
@@ -84,6 +97,17 @@ export const ControlHint = styled.p`
   transition: color ${transitions.main};
 `;
 
+function LabelComponent({ field, isActive, hasErrors, uniqueFieldId, isFieldOptional, t }) {
+  const label = `${field.get('label', field.get('name'))}`;
+  const labelComponent = (
+    <FieldLabel isActive={isActive} hasErrors={hasErrors} htmlFor={uniqueFieldId}>
+      {label} {`${isFieldOptional ? ` (${t('editor.editorControl.field.optional')})` : ''}`}
+    </FieldLabel>
+  );
+
+  return labelComponent;
+}
+
 class EditorControl extends React.Component {
   static propTypes = {
     value: PropTypes.oneOfType([
@@ -101,11 +125,12 @@ class EditorControl extends React.Component {
     openMediaLibrary: PropTypes.func.isRequired,
     addAsset: PropTypes.func.isRequired,
     removeInsertedMedia: PropTypes.func.isRequired,
+    persistMedia: PropTypes.func.isRequired,
     onValidate: PropTypes.func,
     processControlRef: PropTypes.func,
     controlRef: PropTypes.func,
     query: PropTypes.func.isRequired,
-    queryHits: PropTypes.oneOfType([PropTypes.array, PropTypes.object]),
+    queryHits: PropTypes.object,
     isFetching: PropTypes.bool,
     clearSearch: PropTypes.func.isRequired,
     clearFieldErrors: PropTypes.func.isRequired,
@@ -113,6 +138,17 @@ class EditorControl extends React.Component {
     t: PropTypes.func.isRequired,
     isEditorComponent: PropTypes.bool,
     isNewEditorComponent: PropTypes.bool,
+    parentIds: PropTypes.arrayOf(PropTypes.string),
+    entry: ImmutablePropTypes.map.isRequired,
+    collection: ImmutablePropTypes.map.isRequired,
+    isDisabled: PropTypes.bool,
+    isHidden: PropTypes.bool,
+    isFieldDuplicate: PropTypes.func,
+    isFieldHidden: PropTypes.func,
+  };
+
+  static defaultProps = {
+    parentIds: [],
   };
 
   state = {
@@ -121,9 +157,23 @@ class EditorControl extends React.Component {
 
   uniqueFieldId = uniqueId(`${this.props.field.get('name')}-field-`);
 
+  isAncestorOfFieldError = () => {
+    const { fieldsErrors } = this.props;
+
+    if (fieldsErrors && fieldsErrors.size > 0) {
+      return Object.values(fieldsErrors.toJS()).some(arr =>
+        arr.some(err => err.parentIds && err.parentIds.includes(this.uniqueFieldId)),
+      );
+    }
+    return false;
+  };
+
   render() {
     const {
       value,
+      entry,
+      collection,
+      config,
       field,
       fieldsMetaData,
       fieldsErrors,
@@ -135,6 +185,7 @@ class EditorControl extends React.Component {
       removeMediaControl,
       addAsset,
       removeInsertedMedia,
+      persistMedia,
       onValidate,
       processControlRef,
       controlRef,
@@ -148,7 +199,13 @@ class EditorControl extends React.Component {
       isSelected,
       isEditorComponent,
       isNewEditorComponent,
+      parentIds,
       t,
+      validateMetaField,
+      isDisabled,
+      isHidden,
+      isFieldDuplicate,
+      isFieldHidden,
     } = this.props;
 
     const widgetName = field.get('widget');
@@ -159,10 +216,18 @@ class EditorControl extends React.Component {
     const onValidateObject = onValidate;
     const metadata = fieldsMetaData && fieldsMetaData.get(fieldName);
     const errors = fieldsErrors && fieldsErrors.get(this.uniqueFieldId);
+    const childErrors = this.isAncestorOfFieldError();
+    const hasErrors = !!errors || childErrors;
+
     return (
       <ClassNames>
         {({ css, cx }) => (
-          <ControlContainer className={className}>
+          <ControlContainer
+            className={className}
+            css={css`
+              ${isHidden && styleStrings.hidden};
+            `}
+          >
             {widget.globalStyles && <Global styles={coreCss`${widget.globalStyles}`} />}
             {errors && (
               <ControlErrorsList>
@@ -177,13 +242,14 @@ class EditorControl extends React.Component {
                 )}
               </ControlErrorsList>
             )}
-            <FieldLabel
+            <LabelComponent
+              field={field}
               isActive={isSelected || this.state.styleActive}
-              hasErrors={!!errors}
-              htmlFor={this.uniqueFieldId}
-            >
-              {`${field.get('label', field.get('name'))}${isFieldOptional ? ' (optional)' : ''}`}
-            </FieldLabel>
+              hasErrors={hasErrors}
+              uniqueFieldId={this.uniqueFieldId}
+              isFieldOptional={isFieldOptional}
+              t={t}
+            />
             <Widget
               classNameWrapper={cx(
                 css`
@@ -197,7 +263,12 @@ class EditorControl extends React.Component {
                 {
                   [css`
                     ${styleStrings.widgetError};
-                  `]: !!errors,
+                  `]: hasErrors,
+                },
+                {
+                  [css`
+                    ${styleStrings.disabled}
+                  `]: isDisabled,
                 },
               )}
               classNameWidget={css`
@@ -213,17 +284,21 @@ class EditorControl extends React.Component {
                 ${styleStrings.labelActive};
               `}
               controlComponent={widget.control}
+              entry={entry}
+              collection={collection}
+              config={config}
               field={field}
               uniqueFieldId={this.uniqueFieldId}
               value={value}
               mediaPaths={mediaPaths}
               metadata={metadata}
-              onChange={(newValue, newMetadata) => onChange(fieldName, newValue, newMetadata)}
+              onChange={(newValue, newMetadata) => onChange(field, newValue, newMetadata)}
               onValidate={onValidate && partial(onValidate, this.uniqueFieldId)}
               onOpenMediaLibrary={openMediaLibrary}
               onClearMediaControl={clearMediaControl}
               onRemoveMediaControl={removeMediaControl}
               onRemoveInsertedMedia={removeInsertedMedia}
+              onPersistMedia={persistMedia}
               onAddAsset={addAsset}
               getAsset={boundGetAsset}
               hasActiveStyle={isSelected || this.state.styleActive}
@@ -237,7 +312,7 @@ class EditorControl extends React.Component {
               editorControl={ConnectedEditorControl}
               query={query}
               loadEntry={loadEntry}
-              queryHits={queryHits}
+              queryHits={queryHits[this.uniqueFieldId] || []}
               clearSearch={clearSearch}
               clearFieldErrors={clearFieldErrors}
               isFetching={isFetching}
@@ -245,11 +320,32 @@ class EditorControl extends React.Component {
               onValidateObject={onValidateObject}
               isEditorComponent={isEditorComponent}
               isNewEditorComponent={isNewEditorComponent}
+              parentIds={parentIds}
               t={t}
+              validateMetaField={validateMetaField}
+              isDisabled={isDisabled}
+              isFieldDuplicate={isFieldDuplicate}
+              isFieldHidden={isFieldHidden}
             />
             {fieldHint && (
-              <ControlHint active={isSelected || this.state.styleActive} error={!!errors}>
-                {fieldHint}
+              <ControlHint active={isSelected || this.state.styleActive} error={hasErrors}>
+                <ReactMarkdown
+                  allowedElements={['a', 'strong', 'em']}
+                  unwrapDisallowed={true}
+                  components={{
+                    // eslint-disable-next-line no-unused-vars
+                    a: ({ node, ...props }) => (
+                      <a
+                        {...props}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'inherit' }}
+                      />
+                    ),
+                  }}
+                >
+                  {fieldHint}
+                </ReactMarkdown>
               </ControlHint>
             )}
           </ControlContainer>
@@ -259,46 +355,64 @@ class EditorControl extends React.Component {
   }
 }
 
-const mapStateToProps = state => {
+function mapStateToProps(state) {
   const { collections, entryDraft } = state;
-  const entryPath = entryDraft.getIn(['entry', 'path']);
+  const entry = entryDraft.get('entry');
   const collection = collections.get(entryDraft.getIn(['entry', 'collection']));
+  const isLoadingAsset = selectIsLoadingAsset(state.medias);
+
+  async function loadEntry(collectionName, slug) {
+    const targetCollection = collections.get(collectionName);
+    if (targetCollection) {
+      const loadedEntry = await tryLoadEntry(state, targetCollection, slug);
+      return loadedEntry;
+    } else {
+      throw new Error(`Can't find collection '${collectionName}'`);
+    }
+  }
 
   return {
     mediaPaths: state.mediaLibrary.get('controlMedia'),
-    isFetching: state.search.get('isFetching'),
-    queryHits: state.search.get('queryHits'),
+    isFetching: state.search.isFetching,
+    queryHits: state.search.queryHits,
+    config: state.config,
+    entry,
     collection,
-    entryPath,
+    isLoadingAsset,
+    loadEntry,
+    validateMetaField: (field, value, t) => validateMetaField(state, collection, field, value, t),
   };
-};
+}
 
-const mapDispatchToProps = {
-  openMediaLibrary,
-  clearMediaControl,
-  removeMediaControl,
-  removeInsertedMedia,
-  addAsset,
-  query,
-  loadEntry: (collectionName, slug) => (dispatch, getState) => {
-    const collection = getState().collections.get(collectionName);
-    return loadEntry(collection, slug)(dispatch, getState);
-  },
-  clearSearch,
-  clearFieldErrors,
-  boundGetAsset: (collection, entryPath) => (dispatch, getState) => path => {
-    return getAsset({ collection, entryPath, path })(dispatch, getState);
-  },
-};
+function mapDispatchToProps(dispatch) {
+  const creators = bindActionCreators(
+    {
+      openMediaLibrary,
+      clearMediaControl,
+      removeMediaControl,
+      removeInsertedMedia,
+      persistMedia,
+      addAsset,
+      query,
+      clearSearch,
+      clearFieldErrors,
+    },
+    dispatch,
+  );
+  return {
+    ...creators,
+    boundGetAsset: (collection, entry) => boundGetAsset(dispatch, collection, entry),
+  };
+}
 
-const mergeProps = (stateProps, dispatchProps, ownProps) => {
+function mergeProps(stateProps, dispatchProps, ownProps) {
   return {
     ...stateProps,
     ...dispatchProps,
     ...ownProps,
-    boundGetAsset: dispatchProps.boundGetAsset(stateProps.collection, stateProps.entryPath),
+    boundGetAsset: dispatchProps.boundGetAsset(stateProps.collection, stateProps.entry),
   };
-};
+}
 
 const ConnectedEditorControl = connect(
   mapStateToProps,

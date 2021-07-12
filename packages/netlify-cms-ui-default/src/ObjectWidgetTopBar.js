@@ -2,10 +2,11 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import styled from '@emotion/styled';
 import { css } from '@emotion/core';
+import ImmutablePropTypes from 'react-immutable-proptypes';
+
 import Icon from './Icon';
 import { colors, buttons } from './styles';
 import Dropdown, { StyledDropdownButton, DropdownItem } from './Dropdown';
-import ImmutablePropTypes from 'react-immutable-proptypes';
 
 const TopBarContainer = styled.div`
   align-items: center;
@@ -109,7 +110,7 @@ class ObjectWidgetTopBar extends React.Component {
     return (
       <TopBarContainer>
         <ExpandButtonContainer hasHeading={!!heading}>
-          <ExpandButton onClick={onCollapseToggle}>
+          <ExpandButton onClick={onCollapseToggle} data-testid="expand-button">
             <Icon type="chevron" direction={collapsed ? 'right' : 'down'} size="small" />
           </ExpandButton>
           {heading}

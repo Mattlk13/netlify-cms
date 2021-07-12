@@ -1,11 +1,7 @@
-import {
-  parseLinkHeader,
-  getAllResponses,
-  getPathDepth,
-  filterByPropExtension,
-} from '../backendUtil';
 import { oneLine } from 'common-tags';
 import nock from 'nock';
+
+import { parseLinkHeader, getAllResponses, getPathDepth, filterByExtension } from '../backendUtil';
 
 describe('parseLinkHeader', () => {
   it('should return the right rel urls', () => {
@@ -26,17 +22,20 @@ describe('parseLinkHeader', () => {
 });
 
 describe('getAllResponses', () => {
-  const generatePulls = length => {
+  function generatePulls(length) {
     return Array.from({ length }, (_, id) => {
       return { id: id + 1, number: `134${id}`, state: 'open' };
     });
-  };
+  }
 
   function createLinkHeaders({ page, pageCount }) {
     const pageNum = parseInt(page, 10);
     const pageCountNum = parseInt(pageCount, 10);
     const url = 'https://api.github.com/pulls';
-    const link = linkPage => `<${url}?page=${linkPage}>`;
+
+    function link(linkPage) {
+      return `<${url}?page=${linkPage}>`;
+    }
 
     const linkHeader = oneLine`
       ${pageNum === 1 ? '' : `${link(1)}; rel="first",`}
@@ -66,7 +65,7 @@ describe('getAllResponses', () => {
 
   it('should return all paged response', async () => {
     interceptCall({ repeat: 3, data: generatePulls(70) });
-    const res = await getAllResponses('https://api.github.com/pulls');
+    const res = await getAllResponses('https://api.github.com/pulls', {}, 'next', url => url);
     const pages = await Promise.all(res.map(res => res.json()));
 
     expect(pages[0]).toHaveLength(30);
@@ -85,13 +84,14 @@ describe('getPathDepth', () => {
   });
 });
 
-describe('filterByPropExtension', () => {
-  it('should return filtered array based on extension', () => {
-    expect(
-      filterByPropExtension('.html.md', 'path')([{ path: 'file.html.md' }, { path: 'file.json' }]),
-    ).toEqual([{ path: 'file.html.md' }]);
-    expect(
-      filterByPropExtension('html.md', 'path')([{ path: 'file.html.md' }, { path: 'file.json' }]),
-    ).toEqual([{ path: 'file.html.md' }]);
+describe('filterByExtension', () => {
+  it('should return true when extension matches', () => {
+    expect(filterByExtension({ path: 'file.html.md' }, '.html.md')).toBe(true);
+    expect(filterByExtension({ path: 'file.html.md' }, 'html.md')).toBe(true);
+  });
+
+  it("should return false when extension doesn't match", () => {
+    expect(filterByExtension({ path: 'file.json' }, '.html.md')).toBe(false);
+    expect(filterByExtension({ path: 'file.json' }, 'html.md')).toBe(false);
   });
 });

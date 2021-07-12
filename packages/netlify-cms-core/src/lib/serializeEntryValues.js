@@ -1,5 +1,6 @@
 import { isNil } from 'lodash';
 import { Map, List } from 'immutable';
+
 import { getWidgetValueSerializer } from './registry';
 
 /**
@@ -20,14 +21,14 @@ import { getWidgetValueSerializer } from './registry';
  * registered deserialization handlers run on entry load, and serialization
  * handlers run on persist.
  */
-const runSerializer = (values, fields, method) => {
+function runSerializer(values, fields, method) {
   /**
    * Reduce the list of fields to a map where keys are field names and values
    * are field values, serializing the values of fields whose widgets have
    * registered serializers.  If the field is a list or object, call recursively
    * for nested fields.
    */
-  return fields.reduce((acc, field) => {
+  let serializedData = fields.reduce((acc, field) => {
     const fieldName = field.get('name');
     const value = values.get(fieldName);
     const serializer = getWidgetValueSerializer(field.get('widget'));
@@ -58,12 +59,17 @@ const runSerializer = (values, fields, method) => {
 
     return acc;
   }, Map());
-};
 
-export const serializeValues = (values, fields) => {
+  //preserve unknown fields value
+  serializedData = values.mergeDeep(serializedData);
+
+  return serializedData;
+}
+
+export function serializeValues(values, fields) {
   return runSerializer(values, fields, 'serialize');
-};
+}
 
-export const deserializeValues = (values, fields) => {
+export function deserializeValues(values, fields) {
   return runSerializer(values, fields, 'deserialize');
-};
+}

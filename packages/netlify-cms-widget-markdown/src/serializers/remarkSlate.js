@@ -1,4 +1,4 @@
-import { isEmpty, isArray, flatMap, map, flatten } from 'lodash';
+import { isEmpty, isArray, flatMap, map, flatten, isEqual } from 'lodash';
 
 /**
  * Map of MDAST node types to Slate node types.
@@ -28,10 +28,19 @@ const markMap = {
   inlineCode: 'code',
 };
 
-const isInline = node => node.object === 'inline';
-const isText = node => node.object === 'text';
+function isInline(node) {
+  return node.object === 'inline';
+}
 
-export const wrapInlinesWithTexts = children => {
+function isText(node) {
+  return node.object === 'text';
+}
+
+function isMarksEqual(node1, node2) {
+  return isEqual(node1.marks, node2.marks);
+}
+
+export function wrapInlinesWithTexts(children) {
   if (children.length <= 0) {
     return children;
   }
@@ -62,7 +71,40 @@ export const wrapInlinesWithTexts = children => {
   }
 
   return children;
-};
+}
+
+export function mergeAdjacentTexts(children) {
+  if (children.length <= 0) {
+    return children;
+  }
+
+  const mergedChildren = [];
+
+  let isMerging = false;
+  let current;
+
+  for (let i = 0; i < children.length - 1; i++) {
+    if (!isMerging) {
+      current = children[i];
+    }
+    const next = children[i + 1];
+    if (isText(current) && isText(next) && isMarksEqual(current, next)) {
+      isMerging = true;
+      current = { ...current, text: `${current.text}${next.text}` };
+    } else {
+      mergedChildren.push(current);
+      isMerging = false;
+    }
+  }
+
+  if (isMerging) {
+    mergedChildren.push(current);
+  } else {
+    mergedChildren.push(children[children.length - 1]);
+  }
+
+  return mergedChildren;
+}
 
 /**
  * A Remark plugin for converting an MDAST to Slate Raw AST. Remark plugins
@@ -87,6 +129,8 @@ export default function remarkToSlate({ voidCodeBlock } = {}) {
     if (Array.isArray(children)) {
       // Ensure that inline nodes are surrounded by text nodes to conform to slate schema
       children = wrapInlinesWithTexts(children);
+      // Merge adjacent text nodes with the same marks to conform to slate schema
+      children = mergeAdjacentTexts(children);
     }
 
     /**
@@ -194,7 +238,9 @@ export default function remarkToSlate({ voidCodeBlock } = {}) {
      * mark nodes, if any.
      */
     const markType = markMap[node.type];
-    const marks = markType ? [...parentMarks, { type: markMap[node.type] }] : parentMarks;
+    const marks = markType
+      ? [...parentMarks.filter(({ type }) => type !== markType), { type: markType }]
+      : parentMarks;
 
     const children = flatMap(node.children, child => processMarkChild(child, marks));
 
@@ -246,16 +292,8 @@ export default function remarkToSlate({ voidCodeBlock } = {}) {
         return createBlock(typeMap[node.type], nodes, { data });
       }
 
-      /**
-       * Text
-       *
-       * Text nodes contain plain text. We remove newlines because they don't
-       * carry meaning for a rich text editor - a break in rich text would be
-       * expected to result in a break in output HTML, but that isn't the case.
-       * To avoid this confusion we remove them.
-       */
       case 'text': {
-        const text = node.value.replace(/\n/, ' ');
+        const text = node.value;
         return createText(text);
       }
 

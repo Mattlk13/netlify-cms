@@ -7,6 +7,7 @@ import remarkToRehype from 'remark-rehype';
 import rehypeToHtml from 'rehype-stringify';
 import htmlToRehype from 'rehype-parse';
 import rehypeToRemark from 'rehype-remark';
+
 import remarkToRehypeShortcodes from './remarkRehypeShortcodes';
 import rehypePaperEmoji from './rehypePaperEmoji';
 import remarkAssertParents from './remarkAssertParents';
@@ -58,7 +59,7 @@ import { getEditorComponents } from '../MarkdownControl';
 /**
  * Deserialize a Markdown string to an MDAST.
  */
-export const markdownToRemark = markdown => {
+export function markdownToRemark(markdown) {
   /**
    * Parse the Markdown string input to an MDAST.
    */
@@ -72,12 +73,10 @@ export const markdownToRemark = markdown => {
   /**
    * Further transform the MDAST with plugins.
    */
-  const result = unified()
-    .use(remarkSquashReferences)
-    .runSync(parsed);
+  const result = unified().use(remarkSquashReferences).runSync(parsed);
 
   return result;
-};
+}
 
 /**
  * Remove named tokenizers from the parser, effectively deactivating them.
@@ -92,7 +91,7 @@ function markdownToRemarkRemoveTokenizers({ inlineTokenizers }) {
 /**
  * Serialize an MDAST to a Markdown string.
  */
-export const remarkToMarkdown = obj => {
+export function remarkToMarkdown(obj) {
   /**
    * Rewrite the remark-stringify text visitor to simply return the text value,
    * without encoding or escaping any characters. This means we're completely
@@ -143,22 +142,22 @@ export const remarkToMarkdown = obj => {
    * Return markdown with trailing whitespace removed.
    */
   return trimEnd(markdown);
-};
+}
 
 /**
  * Convert Markdown to HTML.
  */
-export const markdownToHtml = async (markdown, { getAsset, resolveWidget } = {}) => {
+export function markdownToHtml(markdown, { getAsset, resolveWidget } = {}) {
   const mdast = markdownToRemark(markdown);
 
-  const hast = await unified()
+  const hast = unified()
     .use(remarkToRehypeShortcodes, { plugins: getEditorComponents(), getAsset, resolveWidget })
     .use(remarkToRehype, { allowDangerousHTML: true })
-    .run(mdast);
+    .runSync(mdast);
 
   const html = unified()
     .use(rehypeToHtml, {
-      allowDangerousHTML: true,
+      allowDangerousHtml: true,
       allowDangerousCharacters: true,
       closeSelfClosing: true,
       entities: { useNamedReferences: true },
@@ -166,16 +165,14 @@ export const markdownToHtml = async (markdown, { getAsset, resolveWidget } = {})
     .stringify(hast);
 
   return html;
-};
+}
 
 /**
  * Deserialize an HTML string to Slate's Raw AST. Currently used for HTML
  * pastes.
  */
-export const htmlToSlate = html => {
-  const hast = unified()
-    .use(htmlToRehype, { fragment: true })
-    .parse(html);
+export function htmlToSlate(html) {
+  const hast = unified().use(htmlToRehype, { fragment: true }).parse(html);
 
   const mdast = unified()
     .use(rehypePaperEmoji)
@@ -190,12 +187,12 @@ export const htmlToSlate = html => {
     .runSync(mdast);
 
   return slateRaw;
-};
+}
 
 /**
  * Convert Markdown to Slate's Raw AST.
  */
-export const markdownToSlate = (markdown, { voidCodeBlock } = {}) => {
+export function markdownToSlate(markdown, { voidCodeBlock } = {}) {
   const mdast = markdownToRemark(markdown);
 
   const slateRaw = unified()
@@ -204,7 +201,7 @@ export const markdownToSlate = (markdown, { voidCodeBlock } = {}) => {
     .runSync(mdast);
 
   return slateRaw;
-};
+}
 
 /**
  * Convert a Slate Raw AST to Markdown.
@@ -215,8 +212,8 @@ export const markdownToSlate = (markdown, { voidCodeBlock } = {}) => {
  * MDAST. The conversion is manual because Unified can only operate on Unist
  * trees.
  */
-export const slateToMarkdown = (raw, { voidCodeBlock } = {}) => {
+export function slateToMarkdown(raw, { voidCodeBlock } = {}) {
   const mdast = slateToRemark(raw, { voidCodeBlock });
   const markdown = remarkToMarkdown(mdast);
   return markdown;
-};
+}

@@ -6,6 +6,7 @@ import { orderBy, map } from 'lodash';
 import { translate } from 'react-polyglot';
 import fuzzy from 'fuzzy';
 import { fileExtension } from 'netlify-cms-lib-util';
+
 import {
   loadMedia as loadMediaAction,
   persistMedia as persistMediaAction,
@@ -13,15 +14,25 @@ import {
   insertMedia as insertMediaAction,
   loadMediaDisplayURL as loadMediaDisplayURLAction,
   closeMediaLibrary as closeMediaLibraryAction,
-} from 'Actions/mediaLibrary';
-import { selectMediaFiles } from 'Reducers/mediaLibrary';
+} from '../../actions/mediaLibrary';
+import { selectMediaFiles } from '../../reducers/mediaLibrary';
 import MediaLibraryModal, { fileShape } from './MediaLibraryModal';
 
 /**
  * Extensions used to determine which files to show when the media library is
  * accessed from an image insertion field.
  */
-const IMAGE_EXTENSIONS_VIEWABLE = ['jpg', 'jpeg', 'webp', 'gif', 'png', 'bmp', 'tiff', 'svg'];
+const IMAGE_EXTENSIONS_VIEWABLE = [
+  'jpg',
+  'jpeg',
+  'webp',
+  'gif',
+  'png',
+  'bmp',
+  'tiff',
+  'svg',
+  'avif',
+];
 const IMAGE_EXTENSIONS = [...IMAGE_EXTENSIONS_VIEWABLE];
 
 class MediaLibrary extends React.Component {
@@ -160,7 +171,7 @@ class MediaLibrary extends React.Component {
     event.persist();
     event.stopPropagation();
     event.preventDefault();
-    const { persistMedia, privateUpload, config, t } = this.props;
+    const { persistMedia, privateUpload, config, t, field } = this.props;
     const { files: fileList } = event.dataTransfer || event.target;
     const files = [...fileList];
     const file = files[0];
@@ -173,7 +184,7 @@ class MediaLibrary extends React.Component {
         }),
       );
     } else {
-      await persistMedia(file, { privateUpload });
+      await persistMedia(file, { privateUpload, field });
 
       this.setState({ selectedFile: this.props.files[0] });
 
@@ -190,8 +201,8 @@ class MediaLibrary extends React.Component {
   handleInsert = () => {
     const { selectedFile } = this.state;
     const { path } = selectedFile;
-    const { insertMedia } = this.props;
-    insertMedia(path);
+    const { insertMedia, field } = this.props;
+    insertMedia(path, field);
     this.handleClose();
   };
 
@@ -209,6 +220,36 @@ class MediaLibrary extends React.Component {
       this.setState({ selectedFile: {} });
     });
   };
+
+  /**
+   * Downloads the selected file.
+   */
+  handleDownload = () => {
+    const { selectedFile } = this.state;
+    const { displayURLs } = this.props;
+    const url = displayURLs.getIn([selectedFile.id, 'url']) || selectedFile.url;
+    if (!url) {
+      return;
+    }
+
+    const filename = selectedFile.name;
+
+    const element = document.createElement('a');
+    element.setAttribute('href', url);
+    element.setAttribute('download', filename);
+
+    element.style.display = 'none';
+    document.body.appendChild(element);
+
+    element.click();
+
+    document.body.removeChild(element);
+    this.setState({ selectedFile: {} });
+  };
+
+  /**
+   *
+   */
 
   handleLoadMore = () => {
     const { loadMedia, dynamicSearchQuery, page, privateUpload } = this.props;
@@ -302,6 +343,7 @@ class MediaLibrary extends React.Component {
         handlePersist={this.handlePersist}
         handleDelete={this.handleDelete}
         handleInsert={this.handleInsert}
+        handleDownload={this.handleDownload}
         setScrollContainerRef={ref => (this.scrollContainerRef = ref)}
         handleAssetClick={this.handleAssetClick}
         handleLoadMore={this.handleLoadMore}
@@ -313,12 +355,13 @@ class MediaLibrary extends React.Component {
   }
 }
 
-const mapStateToProps = state => {
+function mapStateToProps(state) {
   const { mediaLibrary } = state;
+  const field = mediaLibrary.get('field');
   const mediaLibraryProps = {
     isVisible: mediaLibrary.get('isVisible'),
     canInsert: mediaLibrary.get('canInsert'),
-    files: selectMediaFiles(state),
+    files: selectMediaFiles(state, field),
     displayURLs: mediaLibrary.get('displayURLs'),
     dynamicSearch: mediaLibrary.get('dynamicSearch'),
     dynamicSearchActive: mediaLibrary.get('dynamicSearchActive'),
@@ -332,9 +375,10 @@ const mapStateToProps = state => {
     page: mediaLibrary.get('page'),
     hasNextPage: mediaLibrary.get('hasNextPage'),
     isPaginating: mediaLibrary.get('isPaginating'),
+    field,
   };
   return { ...mediaLibraryProps };
-};
+}
 
 const mapDispatchToProps = {
   loadMedia: loadMediaAction,

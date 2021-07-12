@@ -1,24 +1,27 @@
 /* eslint-disable react/prop-types */
 import React from 'react';
 import { css } from '@emotion/core';
+import { zIndex } from 'netlify-cms-ui-default';
 
-const InsertionPoint = props => (
-  <div
-    css={css`
-      height: 32px;
-      cursor: text;
-      position: relative;
-      z-index: 1;
-      margin-top: -16px;
-    `}
-    {...props}
-  />
-);
+function InsertionPoint(props) {
+  return (
+    <div
+      css={css`
+        height: 32px;
+        cursor: text;
+        position: relative;
+        z-index: ${zIndex.zIndex1};
+        margin-top: -16px;
+      `}
+      {...props}
+    />
+  );
+}
 
-const VoidBlock = ({ editor, attributes, node, children }) => {
-  const handleClick = event => {
+function VoidBlock({ editor, attributes, node, children }) {
+  function handleClick(event) {
     event.stopPropagation();
-  };
+  }
 
   return (
     <div {...attributes} onClick={handleClick}>
@@ -31,6 +34,6 @@ const VoidBlock = ({ editor, attributes, node, children }) => {
       )}
     </div>
   );
-};
+}
 
 export default VoidBlock;

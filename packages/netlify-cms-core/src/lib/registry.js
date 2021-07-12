@@ -1,7 +1,21 @@
 import { Map } from 'immutable';
 import produce from 'immer';
 import { oneLine } from 'common-tags';
-import EditorComponent from 'ValueObjects/EditorComponent';
+
+import EditorComponent from '../valueObjects/EditorComponent';
+
+const allowedEvents = [
+  'prePublish',
+  'postPublish',
+  'preUnpublish',
+  'postUnpublish',
+  'preSave',
+  'postSave',
+];
+const eventHandlers = {};
+allowedEvents.forEach(e => {
+  eventHandlers[e] = [];
+});
 
 /**
  * Global Registry Object
@@ -15,6 +29,7 @@ const registry = {
   widgetValueSerializers: {},
   mediaLibraries: [],
   locales: {},
+  eventHandlers,
 };
 
 export default {
@@ -36,6 +51,10 @@ export default {
   getMediaLibrary,
   registerLocale,
   getLocale,
+  registerEventListener,
+  removeEventListener,
+  getEventListeners,
+  invokeEvent,
 };
 
 /**
@@ -64,7 +83,7 @@ export function getPreviewTemplate(name) {
 /**
  * Editor Widgets
  */
-export function registerWidget(name, control, preview) {
+export function registerWidget(name, control, preview, schema = {}) {
   if (Array.isArray(name)) {
     name.forEach(widget => {
       if (typeof widget !== 'object') {
@@ -77,12 +96,13 @@ export function registerWidget(name, control, preview) {
     // A registered widget control can be reused by a new widget, allowing
     // multiple copies with different previews.
     const newControl = typeof control === 'string' ? registry.widgets[control].control : control;
-    registry.widgets[name] = { control: newControl, preview };
+    registry.widgets[name] = { control: newControl, preview, schema };
   } else if (typeof name === 'object') {
     const {
       name: widgetName,
       controlComponent: control,
       previewComponent: preview,
+      schema = {},
       allowMapValue,
       globalStyles,
       ...options
@@ -96,7 +116,14 @@ export function registerWidget(name, control, preview) {
     if (!control) {
       throw Error(`Widget "${widgetName}" registered without \`controlComponent\`.`);
     }
-    registry.widgets[widgetName] = { control, preview, globalStyles, allowMapValue, ...options };
+    registry.widgets[widgetName] = {
+      control,
+      preview,
+      schema,
+      globalStyles,
+      allowMapValue,
+      ...options,
+    };
   } else {
     console.error('`registerWidget` failed, called with incorrect arguments.');
   }
@@ -179,6 +206,52 @@ export function registerMediaLibrary(mediaLibrary, options) {
 
 export function getMediaLibrary(name) {
   return registry.mediaLibraries.find(ml => ml.name === name);
+}
+
+function validateEventName(name) {
+  if (!allowedEvents.includes(name)) {
+    throw new Error(`Invalid event name '${name}'`);
+  }
+}
+
+export function getEventListeners(name) {
+  validateEventName(name);
+  return [...registry.eventHandlers[name]];
+}
+
+export function registerEventListener({ name, handler }, options = {}) {
+  validateEventName(name);
+  registry.eventHandlers[name].push({ handler, options });
+}
+
+export async function invokeEvent({ name, data }) {
+  validateEventName(name);
+  const handlers = registry.eventHandlers[name];
+
+  let _data = { ...data };
+  for (const { handler, options } of handlers) {
+    try {
+      const result = await handler(_data, options);
+      if (result !== undefined) {
+        const entry = _data.entry.set('data', result);
+        _data = { ...data, entry };
+      }
+    } catch (e) {
+      console.warn(`Failed running handler for event ${name} with message: ${e.message}`);
+    }
+  }
+  return _data.entry.get('data');
+}
+
+export function removeEventListener({ name, handler }) {
+  validateEventName(name);
+  if (handler) {
+    registry.eventHandlers[name] = registry.eventHandlers[name].filter(
+      item => item.handler !== handler,
+    );
+  } else {
+    registry.eventHandlers[name] = [];
+  }
 }
 
 /**

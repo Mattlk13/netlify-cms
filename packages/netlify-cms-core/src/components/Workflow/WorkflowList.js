@@ -6,9 +6,11 @@ import styled from '@emotion/styled';
 import moment from 'moment';
 import { translate } from 'react-polyglot';
 import { colors, lengths } from 'netlify-cms-ui-default';
-import { status } from 'Constants/publishModes';
-import { DragSource, DropTarget, HTML5DragDrop } from 'UI';
+
+import { status } from '../../constants/publishModes';
+import { DragSource, DropTarget, HTML5DragDrop } from '../UI';
 import WorkflowCard from './WorkflowCard';
+import { selectEntryCollectionTitle } from '../../reducers/collections';
 
 const WorkflowListContainer = styled.div`
   min-height: 60%;
@@ -115,7 +117,7 @@ const ColumnCount = styled.p`
 // This is a namespace so that we can only drop these elements on a DropTarget with the same
 const DNDNamespace = 'cms-workflow';
 
-const getColumnHeaderText = (columnName, t) => {
+function getColumnHeaderText(columnName, t) {
   switch (columnName) {
     case 'draft':
       return t('workflow.workflowList.draftHeader');
@@ -124,7 +126,7 @@ const getColumnHeaderText = (columnName, t) => {
     case 'pending_publish':
       return t('workflow.workflowList.readyHeader');
   }
-};
+}
 
 class WorkflowList extends React.Component {
   static propTypes = {
@@ -134,6 +136,7 @@ class WorkflowList extends React.Component {
     handleDelete: PropTypes.func.isRequired,
     t: PropTypes.func.isRequired,
     isOpenAuthoring: PropTypes.bool,
+    collections: ImmutablePropTypes.map.isRequired,
   };
 
   handleChangeStatus = (newStatus, dragProps) => {
@@ -161,7 +164,7 @@ class WorkflowList extends React.Component {
 
   // eslint-disable-next-line react/display-name
   renderColumns = (entries, column) => {
-    const { isOpenAuthoring } = this.props;
+    const { isOpenAuthoring, collections, t } = this.props;
     if (!entries) return null;
 
     if (!column) {
@@ -202,35 +205,45 @@ class WorkflowList extends React.Component {
     return (
       <div>
         {entries.map(entry => {
-          const timestamp = moment(entry.getIn(['metaData', 'timeStamp'])).format('MMMM D');
+          const timestamp = moment(entry.get('updatedOn')).format(
+            t('workflow.workflow.dateFormat'),
+          );
           const slug = entry.get('slug');
-          const editLink = `collections/${entry.getIn(['metaData', 'collection'])}/entries/${slug}`;
-          const ownStatus = entry.getIn(['metaData', 'status']);
-          const collection = entry.getIn(['metaData', 'collection']);
+          const collectionName = entry.get('collection');
+          const editLink = `collections/${collectionName}/entries/${slug}?ref=workflow`;
+          const ownStatus = entry.get('status');
+          const collection = collections.find(
+            collection => collection.get('name') === collectionName,
+          );
+          const collectionLabel = collection?.get('label');
           const isModification = entry.get('isModification');
+
+          const allowPublish = collection?.get('publish');
           const canPublish = ownStatus === status.last() && !entry.get('isPersisting', false);
+
           return (
             <DragSource
               namespace={DNDNamespace}
-              key={`${collection}-${slug}`}
+              key={`${collectionName}-${slug}`}
               slug={slug}
-              collection={collection}
+              collection={collectionName}
               ownStatus={ownStatus}
             >
               {connect =>
                 connect(
                   <div>
                     <WorkflowCard
-                      collectionName={collection}
-                      title={entry.get('label') || entry.getIn(['data', 'title'])}
+                      collectionLabel={collectionLabel || collectionName}
+                      title={selectEntryCollectionTitle(collection, entry)}
                       authorLastChange={entry.getIn(['metaData', 'user'])}
                       body={entry.getIn(['data', 'body'])}
                       isModification={isModification}
                       editLink={editLink}
                       timestamp={timestamp}
-                      onDelete={this.requestDelete.bind(this, collection, slug, ownStatus)}
+                      onDelete={this.requestDelete.bind(this, collectionName, slug, ownStatus)}
+                      allowPublish={allowPublish}
                       canPublish={canPublish}
-                      onPublish={this.requestPublish.bind(this, collection, slug, ownStatus)}
+                      onPublish={this.requestPublish.bind(this, collectionName, slug, ownStatus)}
                     />
                   </div>,
                 )

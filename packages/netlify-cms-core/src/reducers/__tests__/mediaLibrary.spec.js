@@ -1,5 +1,6 @@
 import { Map, fromJS } from 'immutable';
-import { mediaDeleted } from 'Actions/mediaLibrary';
+
+import { mediaDeleted } from '../../actions/mediaLibrary';
 import mediaLibrary, {
   selectMediaFiles,
   selectMediaFileByPath,
@@ -7,8 +8,8 @@ import mediaLibrary, {
 } from '../mediaLibrary';
 
 jest.mock('uuid/v4');
-jest.mock('Reducers/entries');
-jest.mock('Reducers');
+jest.mock('../entries');
+jest.mock('../');
 
 describe('mediaLibrary', () => {
   it('should remove media file by key', () => {
@@ -43,20 +44,72 @@ describe('mediaLibrary', () => {
     );
   });
 
-  it('should select draft media files when editing a draft', () => {
-    const { selectEditingDraft } = require('Reducers/entries');
+  it('should select draft media files from field when editing a draft', () => {
+    const { selectEditingDraft, selectMediaFolder } = require('../../reducers/entries');
 
     selectEditingDraft.mockReturnValue(true);
+    selectMediaFolder.mockReturnValue('/static/images/posts/logos');
 
+    const imageField = fromJS({ name: 'image' });
+    const collection = fromJS({ fields: [imageField] });
+    const entry = fromJS({
+      collection: 'posts',
+      mediaFiles: [
+        { id: 1, path: '/static/images/posts/logos/logo.png' },
+        { id: 2, path: '/static/images/posts/general/image.png' },
+        { id: 3, path: '/static/images/posts/index.png' },
+      ],
+      data: {},
+    });
     const state = {
-      entryDraft: fromJS({ entry: { mediaFiles: [{ id: 1 }] } }),
+      config: {},
+      collections: fromJS({ posts: collection }),
+      entryDraft: fromJS({
+        entry,
+      }),
     };
 
-    expect(selectMediaFiles(state)).toEqual([{ key: 1, id: 1 }]);
+    expect(selectMediaFiles(state, imageField)).toEqual([
+      { id: 1, key: 1, path: '/static/images/posts/logos/logo.png' },
+    ]);
+
+    expect(selectMediaFolder).toHaveBeenCalledWith(state.config, collection, entry, imageField);
+  });
+
+  it('should select draft media files from collection when editing a draft', () => {
+    const { selectEditingDraft, selectMediaFolder } = require('../../reducers/entries');
+
+    selectEditingDraft.mockReturnValue(true);
+    selectMediaFolder.mockReturnValue('/static/images/posts');
+
+    const imageField = fromJS({ name: 'image' });
+    const collection = fromJS({ fields: [imageField] });
+    const entry = fromJS({
+      collection: 'posts',
+      mediaFiles: [
+        { id: 1, path: '/static/images/posts/logos/logo.png' },
+        { id: 2, path: '/static/images/posts/general/image.png' },
+        { id: 3, path: '/static/images/posts/index.png' },
+      ],
+      data: {},
+    });
+    const state = {
+      config: {},
+      collections: fromJS({ posts: collection }),
+      entryDraft: fromJS({
+        entry,
+      }),
+    };
+
+    expect(selectMediaFiles(state, imageField)).toEqual([
+      { id: 3, key: 3, path: '/static/images/posts/index.png' },
+    ]);
+
+    expect(selectMediaFolder).toHaveBeenCalledWith(state.config, collection, entry, imageField);
   });
 
   it('should select global media files when not editing a draft', () => {
-    const { selectEditingDraft } = require('Reducers/entries');
+    const { selectEditingDraft } = require('../../reducers/entries');
 
     selectEditingDraft.mockReturnValue(false);
 
@@ -68,7 +121,7 @@ describe('mediaLibrary', () => {
   });
 
   it('should select global media files when not using asset store integration', () => {
-    const { selectIntegration } = require('Reducers');
+    const { selectIntegration } = require('../../reducers');
 
     selectIntegration.mockReturnValue({});
 
@@ -80,7 +133,7 @@ describe('mediaLibrary', () => {
   });
 
   it('should return media file by path', () => {
-    const { selectEditingDraft } = require('Reducers/entries');
+    const { selectEditingDraft } = require('../../reducers/entries');
 
     selectEditingDraft.mockReturnValue(false);
 

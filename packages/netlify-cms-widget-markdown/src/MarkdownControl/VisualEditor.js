@@ -7,7 +7,8 @@ import { css as coreCss, ClassNames } from '@emotion/core';
 import { get, isEmpty, debounce } from 'lodash';
 import { Value, Document, Block, Text } from 'slate';
 import { Editor as Slate } from 'slate-react';
-import { lengths, fonts } from 'netlify-cms-ui-default';
+import { lengths, fonts, zIndex } from 'netlify-cms-ui-default';
+
 import { editorStyleVars, EditorControlBar } from '../styles';
 import { slateToMarkdown, markdownToSlate } from '../serializers';
 import Toolbar from '../MarkdownControl/Toolbar';
@@ -15,12 +16,13 @@ import { renderBlock, renderInline, renderMark } from './renderers';
 import plugins from './plugins/visual';
 import schema from './schema';
 
-const visualEditorStyles = `
+function visualEditorStyles({ minimal }) {
+  return `
   position: relative;
   overflow: hidden;
   overflow-x: auto;
   font-family: ${fonts.primary};
-  min-height: ${lengths.richTextEditorMinHeight};
+  min-height: ${minimal ? 'auto' : lengths.richTextEditorMinHeight};
   border-top-left-radius: 0;
   border-top-right-radius: 0;
   border-top: 0;
@@ -28,26 +30,59 @@ const visualEditorStyles = `
   padding: 0;
   display: flex;
   flex-direction: column;
-  z-index: 100;
+  z-index: ${zIndex.zIndex100};
 `;
+}
 
 const InsertionPoint = styled.div`
   flex: 1 1 auto;
   cursor: text;
 `;
 
-const createEmptyRawDoc = () => {
+function createEmptyRawDoc() {
   const emptyText = Text.create('');
   const emptyBlock = Block.create({ object: 'block', type: 'paragraph', nodes: [emptyText] });
   return { nodes: [emptyBlock] };
-};
+}
 
-const createSlateValue = (rawValue, { voidCodeBlock }) => {
+function createSlateValue(rawValue, { voidCodeBlock }) {
   const rawDoc = rawValue && markdownToSlate(rawValue, { voidCodeBlock });
   const rawDocHasNodes = !isEmpty(get(rawDoc, 'nodes'));
   const document = Document.fromJSON(rawDocHasNodes ? rawDoc : createEmptyRawDoc());
   return Value.create({ document });
-};
+}
+
+export function mergeMediaConfig(editorComponents, field) {
+  // merge editor media library config to image components
+  if (editorComponents.has('image')) {
+    const imageComponent = editorComponents.get('image');
+    const fields = imageComponent?.fields;
+
+    if (fields) {
+      imageComponent.fields = fields.update(
+        fields.findIndex(f => f.get('widget') === 'image'),
+        f => {
+          // merge `media_library` config
+          if (field.has('media_library')) {
+            f = f.set(
+              'media_library',
+              field.get('media_library').mergeDeep(f.get('media_library')),
+            );
+          }
+          // merge 'media_folder'
+          if (field.has('media_folder') && !f.has('media_folder')) {
+            f = f.set('media_folder', field.get('media_folder'));
+          }
+          // merge 'public_folder'
+          if (field.has('public_folder') && !f.has('public_folder')) {
+            f = f.set('public_folder', field.get('public_folder'));
+          }
+          return f;
+        },
+      );
+    }
+  }
+}
 
 export default class Editor extends React.Component {
   constructor(props) {
@@ -59,6 +94,8 @@ export default class Editor extends React.Component {
       this.codeBlockComponent || editorComponents.has('code-block')
         ? editorComponents
         : editorComponents.set('code-block', { label: 'Code Block', type: 'code-block' });
+
+    mergeMediaConfig(this.editorComponents, this.props.field);
     this.renderBlock = renderBlock({
       classNameWrapper: props.className,
       resolveWidget: props.resolveWidget,
@@ -67,7 +104,11 @@ export default class Editor extends React.Component {
     this.renderInline = renderInline();
     this.renderMark = renderMark();
     this.schema = schema({ voidCodeBlock: !!this.codeBlockComponent });
-    this.plugins = plugins({ getAsset: props.getAsset, resolveWidget: props.resolveWidget });
+    this.plugins = plugins({
+      getAsset: props.getAsset,
+      resolveWidget: props.resolveWidget,
+      t: props.t,
+    });
     this.state = {
       value: createSlateValue(this.props.value, { voidCodeBlock: !!this.codeBlockComponent }),
     };
@@ -82,16 +123,28 @@ export default class Editor extends React.Component {
     value: PropTypes.string,
     field: ImmutablePropTypes.map.isRequired,
     getEditorComponents: PropTypes.func.isRequired,
+    isShowModeToggle: PropTypes.bool.isRequired,
+    t: PropTypes.func.isRequired,
   };
 
   shouldComponentUpdate(nextProps, nextState) {
-    return !this.state.value.equals(nextState.value);
+    const raw = nextState.value.document.toJS();
+    const markdown = slateToMarkdown(raw, { voidCodeBlock: this.codeBlockComponent });
+    return !this.state.value.equals(nextState.value) || nextProps.value !== markdown;
   }
 
   componentDidMount() {
     if (this.props.pendingFocus) {
       this.editor.focus();
       this.props.pendingFocus();
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.value !== this.props.value) {
+      this.setState({
+        value: createSlateValue(this.props.value, { voidCodeBlock: !!this.codeBlockComponent }),
+      });
     }
   }
 
@@ -104,12 +157,16 @@ export default class Editor extends React.Component {
   };
 
   handleLinkClick = () => {
-    this.editor.toggleLink(() => window.prompt('Enter the URL of the link'));
+    this.editor.toggleLink(oldUrl =>
+      window.prompt(this.props.t('editor.editorWidgets.markdown.linkPrompt'), oldUrl),
+    );
   };
 
   hasMark = type => this.editor && this.editor.hasMark(type);
   hasInline = type => this.editor && this.editor.hasInline(type);
   hasBlock = type => this.editor && this.editor.hasBlock(type);
+  hasQuote = type => this.editor && this.editor.hasQuote(type);
+  hasListItems = type => this.editor && this.editor.hasListItems(type);
 
   handleToggleMode = () => {
     this.props.onMode('raw');
@@ -142,7 +199,7 @@ export default class Editor extends React.Component {
   };
 
   render() {
-    const { onAddAsset, getAsset, className, field } = this.props;
+    const { onAddAsset, getAsset, className, field, isShowModeToggle, t, isDisabled } = this.props;
     return (
       <div
         css={coreCss`
@@ -160,9 +217,15 @@ export default class Editor extends React.Component {
             onAddAsset={onAddAsset}
             getAsset={getAsset}
             buttons={field.get('buttons')}
+            editorComponents={field.get('editor_components')}
             hasMark={this.hasMark}
             hasInline={this.hasInline}
             hasBlock={this.hasBlock}
+            hasQuote={this.hasQuote}
+            hasListItems={this.hasListItems}
+            isShowModeToggle={isShowModeToggle}
+            t={t}
+            disabled={isDisabled}
           />
         </EditorControlBar>
         <ClassNames>
@@ -171,7 +234,7 @@ export default class Editor extends React.Component {
               className={cx(
                 className,
                 css`
-                  ${visualEditorStyles}
+                  ${visualEditorStyles({ minimal: field.get('minimal') })}
                 `,
               )}
             >

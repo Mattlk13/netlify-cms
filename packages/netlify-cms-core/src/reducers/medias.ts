@@ -1,29 +1,66 @@
-import { fromJS } from 'immutable';
-import { ADD_ASSETS, ADD_ASSET, REMOVE_ASSET } from '../actions/media';
-import AssetProxy from '../valueObjects/AssetProxy';
-import { Medias, MediasAction } from '../types/redux';
+import { produce } from 'immer';
 
-const medias = (state: Medias = fromJS({}), action: MediasAction) => {
+import {
+  ADD_ASSETS,
+  ADD_ASSET,
+  REMOVE_ASSET,
+  LOAD_ASSET_REQUEST,
+  LOAD_ASSET_SUCCESS,
+  LOAD_ASSET_FAILURE,
+} from '../actions/media';
+
+import type { MediasAction } from '../actions/media';
+import type AssetProxy from '../valueObjects/AssetProxy';
+
+export type Medias = {
+  [path: string]: { asset: AssetProxy | undefined; isLoading: boolean; error: Error | null };
+};
+
+const defaultState: Medias = {};
+
+const medias = produce((state: Medias, action: MediasAction) => {
   switch (action.type) {
     case ADD_ASSETS: {
-      const payload = action.payload as AssetProxy[];
-      let newState = state;
-      payload.forEach(asset => {
-        newState = newState.set(asset.path, asset);
+      const assets = action.payload;
+      assets.forEach(asset => {
+        state[asset.path] = { asset, isLoading: false, error: null };
       });
-      return newState;
+      break;
     }
     case ADD_ASSET: {
-      const payload = action.payload as AssetProxy;
-      return state.set(payload.path, payload);
+      const asset = action.payload;
+      state[asset.path] = { asset, isLoading: false, error: null };
+      break;
     }
     case REMOVE_ASSET: {
-      const payload = action.payload as string;
-      return state.delete(payload);
+      const path = action.payload;
+      delete state[path];
+      break;
     }
-    default:
-      return state;
+    case LOAD_ASSET_REQUEST: {
+      const { path } = action.payload;
+      state[path] = state[path] || {};
+      state[path].isLoading = true;
+      break;
+    }
+    case LOAD_ASSET_SUCCESS: {
+      const { path } = action.payload;
+      state[path] = state[path] || {};
+      state[path].isLoading = false;
+      state[path].error = null;
+      break;
+    }
+    case LOAD_ASSET_FAILURE: {
+      const { path, error } = action.payload;
+      state[path] = state[path] || {};
+      state[path].isLoading = false;
+      state[path].error = error;
+    }
   }
-};
+}, defaultState);
+
+export function selectIsLoadingAsset(state: Medias) {
+  return Object.values(state).some(state => state.isLoading);
+}
 
 export default medias;

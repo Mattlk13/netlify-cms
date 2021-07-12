@@ -1,4 +1,14 @@
 {
   "extends": ["github>netlify/renovate-config:default"],
-  "ignorePaths": ["website/"]
+  "ignorePresets": [":prHourlyLimit2"],
+  "semanticCommits": true,
+  "dependencyDashboard": true,
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["emotion", "^remark", "slate"],
+      "major": {
+        "enabled": false
+      }
+    }
+  ]
 }

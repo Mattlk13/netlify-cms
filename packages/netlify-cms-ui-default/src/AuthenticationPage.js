@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import styled from '@emotion/styled';
+
 import Icon from './Icon';
 import { buttons, shadows } from './styles';
 import GoBackButton from './GoBackButton';
@@ -30,20 +31,20 @@ const NetlifyCreditIcon = styled(Icon)`
   bottom: 10px;
 `;
 
-const CustomLogoIcon = ({ url }) => {
+function CustomLogoIcon({ url }) {
   return (
     <CustomIconWrapper>
       <img src={url} alt="Logo" />
     </CustomIconWrapper>
   );
-};
+}
 
-const renderPageLogo = logoUrl => {
+function renderPageLogo(logoUrl) {
   if (logoUrl) {
     return <CustomLogoIcon url={logoUrl} />;
   }
   return <NetlifyLogoIcon size="300px" type="netlify-cms" />;
-};
+}
 
 const LoginButton = styled.button`
   ${buttons.button};
@@ -61,7 +62,7 @@ const LoginButton = styled.button`
   position: relative;
 `;
 
-const AuthenticationPage = ({
+function AuthenticationPage({
   onLogin,
   loginDisabled,
   loginErrorMessage,
@@ -69,7 +70,8 @@ const AuthenticationPage = ({
   renderPageContent,
   logoUrl,
   siteUrl,
-}) => {
+  t,
+}) {
   return (
     <StyledAuthenticationPage>
       {renderPageLogo(logoUrl)}
@@ -80,11 +82,11 @@ const AuthenticationPage = ({
           {renderButtonContent()}
         </LoginButton>
       )}
-      {siteUrl && <GoBackButton href={siteUrl} />}
+      {siteUrl && <GoBackButton href={siteUrl} t={t} />}
       {logoUrl ? <NetlifyCreditIcon size="100px" type="netlify-cms" /> : null}
     </StyledAuthenticationPage>
   );
-};
+}
 
 AuthenticationPage.propTypes = {
   onLogin: PropTypes.func,
@@ -94,6 +96,7 @@ AuthenticationPage.propTypes = {
   loginErrorMessage: PropTypes.node,
   renderButtonContent: PropTypes.func,
   renderPageContent: PropTypes.func,
+  t: PropTypes.func.isRequired,
 };
 
 export default AuthenticationPage;

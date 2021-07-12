@@ -1,7 +1,8 @@
 import React from 'react';
 import { Map } from 'immutable';
-import MediaLibraryCard from '../MediaLibraryCard';
 import { render } from '@testing-library/react';
+
+import MediaLibraryCard from '../MediaLibraryCard';
 
 describe('MediaLibraryCard', () => {
   const props = {
@@ -10,6 +11,7 @@ describe('MediaLibraryCard', () => {
     onClick: jest.fn(),
     draftText: 'Draft',
     width: '100px',
+    height: '240px',
     margin: '10px',
     isViewableImage: true,
     loadDisplayURL: jest.fn(),

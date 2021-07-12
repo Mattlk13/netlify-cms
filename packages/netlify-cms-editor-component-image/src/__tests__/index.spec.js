@@ -1,6 +1,9 @@
 import component from '../index';
 
-const getAsset = path => Promise.resolve(path);
+function getAsset(path) {
+  return path;
+}
+
 const image = '/image';
 const alt = 'alt';
 const title = 'title';
@@ -32,8 +35,8 @@ describe('editor component image', () => {
     );
   });
 
-  it('should generate valid react props', async () => {
-    await expect(component.toPreview({ image, alt, title }, getAsset)).resolves.toMatchObject({
+  it('should generate valid react props', () => {
+    expect(component.toPreview({ image, alt, title }, getAsset)).toMatchObject({
       props: { src: image, alt, title },
     });
   });

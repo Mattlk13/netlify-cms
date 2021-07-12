@@ -27,7 +27,7 @@ export type CursorStore = {
 
 type ActionHandler = (action: string) => unknown;
 
-const jsToMap = (obj: {}) => {
+function jsToMap(obj: {}) {
   if (obj === undefined) {
     return Map();
   }
@@ -36,11 +36,23 @@ const jsToMap = (obj: {}) => {
     throw new Error('Object must be equivalent to a Map.');
   }
   return immutableObj;
-};
+}
 
-const knownMetaKeys = Set(['index', 'count', 'pageSize', 'pageCount', 'usingOldPaginationAPI']);
-const filterUnknownMetaKeys = (meta: Map<string, string>) =>
-  meta.filter((_v, k) => knownMetaKeys.has(k as string));
+const knownMetaKeys = Set([
+  'index',
+  'page',
+  'count',
+  'pageSize',
+  'pageCount',
+  'usingOldPaginationAPI',
+  'extension',
+  'folder',
+  'depth',
+]);
+
+function filterUnknownMetaKeys(meta: Map<string, string>) {
+  return meta.filter((_v, k) => knownMetaKeys.has(k as string));
+}
 
 /*
   createCursorMap takes one of three signatures:
@@ -48,7 +60,7 @@ const filterUnknownMetaKeys = (meta: Map<string, string>) =>
   - (cursorMap: <object/Map with optional actions, data, and meta keys>) -> cursor
   - (actions: <array/List>, data: <object/Map>, meta: <optional object/Map>) -> cursor
 */
-const createCursorStore = (...args: {}[]) => {
+function createCursorStore(...args: {}[]) {
   const { actions, data, meta } =
     args.length === 1
       ? jsToMap(args[0]).toObject()
@@ -61,23 +73,28 @@ const createCursorStore = (...args: {}[]) => {
     data: jsToMap(data),
     meta: jsToMap(meta).update(filterUnknownMetaKeys),
   }) as CursorStore;
-};
+}
 
-const hasAction = (store: CursorStore, action: string) => store.hasIn(['actions', action]);
+function hasAction(store: CursorStore, action: string) {
+  return store.hasIn(['actions', action]);
+}
 
-const getActionHandlers = (store: CursorStore, handler: ActionHandler) =>
-  store
+function getActionHandlers(store: CursorStore, handler: ActionHandler) {
+  return store
     .get('actions', Set<string>())
     .toMap()
     .map(action => handler(action as string));
+}
 
 // The cursor logic is entirely functional, so this class simply
 // provides a chainable interface
 export default class Cursor {
   store?: CursorStore;
   actions?: Set<string>;
-  data?: Map<string, unknown>;
-  meta?: Map<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data?: Map<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  meta?: Map<string, any>;
 
   static create(...args: {}[]) {
     return new Cursor(...args);

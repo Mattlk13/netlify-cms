@@ -1,4 +1,19 @@
 const ru = {
+  auth: {
+    login: 'Войти',
+    loggingIn: 'Вхожу...',
+    loginWithNetlifyIdentity: 'Войти через Netlify Identity',
+    loginWithAzure: 'Войти через Azure',
+    loginWithBitbucket: 'Войти через Bitbucket',
+    loginWithGitHub: 'Войти через GitHub',
+    loginWithGitLab: 'Войти через GitLab',
+    errors: {
+      email: 'Введите ваш email.',
+      password: 'Введите пароль.',
+      identitySettings:
+        'Нет доступа к настройкам. Если используете git-gateway, убедитесь, что включили Identity service и Git Gateway.',
+    },
+  },
   app: {
     header: {
       content: 'Записи',
@@ -20,19 +35,46 @@ const ru = {
   collection: {
     sidebar: {
       collections: 'Коллекции',
+      allCollections: 'Все коллекции',
       searchAll: 'Искать повсюду',
+      searchIn: 'Искать в',
     },
     collectionTop: {
+      sortBy: 'Сортировать по',
       viewAs: 'Вид',
       newButton: 'Создать %{collectionLabel}',
+      ascending: 'По возрастанию',
+      descending: 'По убывания',
+      searchResults: 'Результаты по запросу "%{searchTerm}"',
+      searchResultsInCollection: 'Результаты по запросу "%{searchTerm}" в %{collection}',
+      filterBy: 'Фильтровать по',
+      groupBy: 'Группировать по',
     },
     entries: {
       loadingEntries: 'Загрузка записей…',
       cachingEntries: 'Кэширование записей…',
       longerLoading: 'Это может занять несколько минут',
+      noEntries: 'Нет записей',
+    },
+    groups: {
+      other: 'Другая',
+      negateLabel: 'Не %{label}',
+    },
+    defaultFields: {
+      author: {
+        label: 'Автор',
+      },
+      updatedOn: {
+        label: 'Обновлено',
+      },
     },
   },
   editor: {
+    editorControl: {
+      field: {
+        optional: 'необязательный',
+      },
+    },
     editorControlPane: {
       widget: {
         required: 'Необходимо указать значение поля %{fieldLabel}.',
@@ -41,6 +83,15 @@ const ru = {
         range: 'Значение поля %{fieldLabel} должно быть между %{minValue} и %{maxValue}.',
         min: 'Значение поля %{fieldLabel} должно быть не менее %{minValue}.',
         max: 'Значение поля %{fieldLabel} должно быть %{maxValue} или менее.',
+        rangeCount: '%{fieldLabel} должно содержать от %{minCount} до %{maxCount} элементов.',
+        rangeCountExact: '%{fieldLabel} должно содержать строго %{count} элементов.',
+        rangeMin: '%{fieldLabel} должно содержать не менее %{minCount} элементов.',
+        rangeMax: '%{fieldLabel} должно содержать %{maxCount} или менее элементов.',
+        invalidPath: `Путь '%{path}' содежрит ошибки`,
+        pathExists: `Путь '%{path}' уже существует`,
+      },
+      i18n: {
+        writingInLocale: 'Пишем на %{locale}',
       },
     },
     editor: {
@@ -68,8 +119,10 @@ const ru = {
       publish: 'Опубликовать',
       published: 'Опубликовано',
       unpublish: 'Отменить публикацию',
+      duplicate: 'Дублировать',
       unpublishing: 'Отмена публикации…',
       publishAndCreateNew: 'Опубликовать и создать новую',
+      publishAndDuplicate: 'Опубликовать и дублировать',
       deleteUnpublishedChanges: 'Удалить неопубликованные изменения',
       deleteUnpublishedEntry: 'Удалить неопубликованную запись',
       deletePublishedEntry: 'Удалить опубликованную запись',
@@ -78,7 +131,7 @@ const ru = {
       save: 'Сохранить',
       deleting: 'Удаление…',
       updating: 'Обновление…',
-      setStatus: 'Установить статус',
+      status: 'Cтатус: %{status}',
       backCollection: 'Запись в коллекцию %{collectionLabel}',
       unsavedChanges: 'Несохраненные изменения',
       changesSaved: 'Изменения сохранены',
@@ -91,20 +144,68 @@ const ru = {
       deployButtonLabel: 'Просмотр',
     },
     editorWidgets: {
+      markdown: {
+        bold: 'Полужиный',
+        italic: 'Курсив',
+        code: 'Код',
+        link: 'Ссылка',
+        linkPrompt: 'Укажите URL ссылки',
+        headings: 'Заголовки',
+        quote: 'Цитата',
+        bulletedList: 'Маркированный список',
+        numberedList: 'Нумерованный список',
+        addComponent: 'Добавить компонент',
+        richText: 'Форматированный текст',
+        markdown: 'Markdown',
+      },
+      image: {
+        choose: 'Выберите изображение',
+        chooseUrl: 'Вставить из URL',
+        replaceUrl: 'Заменить на URL',
+        promptUrl: 'Введите URL изображения',
+        chooseDifferent: 'Выберите другое изображение',
+        remove: 'Удалить изображение',
+      },
+      file: {
+        choose: 'Выберите файл',
+        chooseUrl: 'Вставить из URL',
+        replaceUrl: 'Заменить на URL',
+        promptUrl: 'Введите URL файла',
+        chooseDifferent: 'Выберите другой файл',
+        remove: 'Удалить файл',
+      },
       unknownControl: {
         noControl: "Нет контрола для виджета '%{widget}'.",
       },
       unknownPreview: {
         noPreview: "Нет превью для виджета '%{widget}'.",
       },
+      headingOptions: {
+        headingOne: 'Heading 1',
+        headingTwo: 'Heading 2',
+        headingThree: 'Heading 3',
+        headingFour: 'Heading 4',
+        headingFive: 'Heading 5',
+        headingSix: 'Heading 6',
+      },
+      datetime: {
+        now: 'Сейчас',
+      },
     },
   },
   mediaLibrary: {
     mediaLibraryCard: {
       draft: 'Черновик',
+      copy: 'Копировать',
+      copyUrl: 'Копировать URL',
+      copyPath: 'Копировать путь',
+      copyName: 'Копировать имя',
+      copied: 'Скопировано',
     },
     mediaLibrary: {
       onDelete: 'Вы уверены, что хотите удалить выбранный медиафайл?',
+      fileTooLarge:
+        'Файл слишком большой.\nНастройки не позволяют сохранять файлы более %{size} kB.',
     },
     mediaLibraryModal: {
       loading: 'Загрузка медифайлов…',
@@ -116,18 +217,24 @@ const ru = {
       mediaAssets: 'Медиаресурсы',
       search: 'Идёт поиск…',
       uploading: 'Загрузка…',
-      uploadNew: 'Загрузить новый',
+      upload: 'Загрузить новый',
+      download: 'Скачать',
       deleting: 'Удаление…',
       deleteSelected: 'Удалить помеченные',
       chooseSelected: 'Выбрать помеченные',
     },
   },
   ui: {
+    default: {
+      goBackToSite: 'Вернуться на сайт',
+    },
     errorBoundary: {
       title: 'Ошибка',
       details: 'Произошла ошибка. Пожалуйста, ',
       reportIt: 'сообщите о ней.',
       detailsHeading: 'Подробности',
+      privacyWarning:
+        'При открытии тикет автоматически предзаполняется сообщением об ошибке и отладочной информацией.\nПожалуйста, проверьте, что данные верны и не содержат конфиденциальной информации.',
       recoveredEntry: {
         heading: 'Восстановленный документ',
         warning: 'Пожалуйста, скопируйте это сообщение куда-нибудь, прежде чем уйти со страницы!',
@@ -153,6 +260,8 @@ const ru = {
       entryUpdated: 'Статус записи обновлен',
       onDeleteUnpublishedChanges: 'Неопубликованные изменения удалены',
       onFailToAuth: '%{details}',
+      onLoggedOut: 'Вы вышли. Пожалуйста, сохраните все данные и войдите снова',
+      onBackendDown: 'Происходят перебои в работе бекенда. См. %{details}',
     },
   },
   workflow: {
@@ -162,6 +271,7 @@ const ru = {
       newPost: 'Новая запись',
       description:
         'Число записей, ожидающих проверки — %{smart_count}, готовых к публикации — %{readyCount}. |||| Число записей, ожидающих проверки — %{smart_count}, готовых к публикации — %{readyCount}. ',
+      dateFormat: 'MMMM D',
     },
     workflowCard: {
       lastChange: '%{date}, %{author}',

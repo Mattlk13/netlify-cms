@@ -3,6 +3,66 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [2.4.0](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-default-exports/compare/netlify-cms-default-exports@2.3.5...netlify-cms-default-exports@2.4.0) (2021-05-04)
+
+
+### Features
+
+* added react 17 as peer dependency in packages ([#5316](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-default-exports/issues/5316)) ([9e42380](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-default-exports/commit/9e423805707321396eec137f5b732a5b07a0dd3f))
+
+
+
+
+
+## [2.3.5](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-default-exports/compare/netlify-cms-default-exports@2.3.4...netlify-cms-default-exports@2.3.5) (2020-11-26)
+
+**Note:** Version bump only for package netlify-cms-default-exports
+
+
+
+
+
+## [2.3.4](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-default-exports/compare/netlify-cms-default-exports@2.3.3...netlify-cms-default-exports@2.3.4) (2020-09-15)
+
+**Note:** Version bump only for package netlify-cms-default-exports
+
+
+
+
+
+## 2.3.3 (2020-09-08)
+
+
+### Reverts
+
+* Revert "chore(release): publish" ([828bb16](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-default-exports/commit/828bb16415b8c22a34caa19c50c38b24ffe9ceae))
+
+
+
+
+
+## 2.3.2 (2020-08-20)
+
+
+### Reverts
+
+* Revert "chore(release): publish" ([8262487](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-default-exports/commit/82624879ccbcb16610090041db28f00714d924c8))
+
+
+
+
+
+## 2.3.1 (2020-07-27)
+
+
+### Reverts
+
+* Revert "chore(release): publish" ([118d50a](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-default-exports/commit/118d50a7a70295f25073e564b5161aa2b9883056))
+
+
+
+
+
 # [2.3.0](https://github.com/netlify/netlify-cms/tree/master/packages/netlify-cms-default-exports/compare/netlify-cms-default-exports@2.2.3...netlify-cms-default-exports@2.3.0) (2019-12-16)
 
 

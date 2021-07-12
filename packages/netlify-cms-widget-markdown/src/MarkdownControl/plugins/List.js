@@ -2,9 +2,10 @@ import { List } from 'immutable';
 import { castArray, throttle, get } from 'lodash';
 import { Range, Block } from 'slate';
 import isHotkey from 'is-hotkey';
+
 import { assertType } from './util';
 
-const ListPlugin = ({ defaultType, unorderedListType, orderedListType }) => {
+function ListPlugin({ defaultType, unorderedListType, orderedListType }) {
   const LIST_TYPES = [orderedListType, unorderedListType];
 
   function oppositeListType(type) {
@@ -297,6 +298,6 @@ const ListPlugin = ({ defaultType, unorderedListType, orderedListType }) => {
       return next();
     },
   };
-};
+}
 
 export default ListPlugin;

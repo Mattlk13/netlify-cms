@@ -28,14 +28,8 @@ export default class TextControl extends React.Component {
   }
 
   render() {
-    const {
-      forID,
-      value,
-      onChange,
-      classNameWrapper,
-      setActiveStyle,
-      setInactiveStyle,
-    } = this.props;
+    const { forID, value, onChange, classNameWrapper, setActiveStyle, setInactiveStyle } =
+      this.props;
 
     return (
       <Textarea
@@ -44,7 +38,7 @@ export default class TextControl extends React.Component {
         className={classNameWrapper}
         onFocus={setActiveStyle}
         onBlur={setInactiveStyle}
-        style={{ minHeight: '140px' }}
+        minRows={5}
         css={{ fontFamily: 'inherit' }}
         onChange={e => onChange(e.target.value)}
       />

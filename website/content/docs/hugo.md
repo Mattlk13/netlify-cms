@@ -1,9 +1,8 @@
 ---
 title: Hugo
-group: guides
+group: Guides
 weight: 20
 ---
-
 ## Introduction
 
 This guide will walk you through how to integrate Netlify CMS with Hugo. This is a good place to start if you want to learn from the ground up how these two tools work together. If you want to get up-and-running quicker, you can use one of the pre-existing and amazing [starter templates](/docs/start-with-a-template/)!
@@ -87,7 +86,7 @@ In the `config.yml` file, you can add this basic configuration — you can custo
 ```yaml
 backend:
   name: git-gateway
-  branch: master # Branch to update (optional; defaults to master)
+  branch: main # Branch to update (optional; defaults to master)
 media_folder: static/img
 public_folder: /img
 collections:
@@ -116,7 +115,7 @@ git init # Initialize a git repository
 git add . # Add every file
 git commit -m "Initial Commit" # Commit every file with the message 'Initial Commit'
 git remote add origin https://github.com/YOUR_USERNAME/NEW_REPO_NAME.git # Create a new repo on GitHub and add it to this project as a remote repository.
-git push -u origin master # Push your changes
+git push -u origin main # Push your changes
 ```
 
 ### Deploying With Netlify
@@ -164,7 +163,7 @@ In your `layouts/index.html` file, you'll create an unordered list element and u
   <ul>
     {{ range (where .Pages "Section" "blog") }}
     <li>
-      <a href="{{ .Permalink }}">
+      <a href="{{ .RelPermalink }}">
         {{ .Title }}
       </a>
     </li>
@@ -173,7 +172,7 @@ In your `layouts/index.html` file, you'll create an unordered list element and u
 </body>
 ```
 
-That link won't work just right just yet. You'll need to make a single page layout for blog posts, so Hugo can create a page for the `.Permalink` to link to.
+That link won't work just right just yet. You'll need to make a single page layout for blog posts, so Hugo can create a page for the `.RelPermalink` to link to.
 
 ### Creating a single page post layout
 
@@ -200,3 +199,48 @@ Create a file `layouts/blog/single.html`, and put the following content in there
 ```
 
 You can see this basic template includes all the fields you've specified in your Netlify CMS `config.yml` file. You can access any custom front-matter fields with `.Params.<field-name>`!
+
+### Using Hugo shortcodes in the Markdown Editor
+
+Using `registerEditorComponent` we can register a block level component for the Markdown editor. You can use it to add Hugo's inbuilt shortcodes like `gist`,`youtube` and others as block components to the markdown editor.
+
+You can refer to [registering editor components](https://www.netlifycms.org/docs/custom-widgets/#registereditorcomponent) for a getting started guide or for creating your own editor components.
+
+**Example**
+
+```javascript
+CMS.registerEditorComponent({
+    id: "gist",
+    label: "Gist",
+    fields: [{
+            name: "username",
+            label: "Github Username",
+            widget: "string"
+        },
+        {
+            name: "gid",
+            label: "Gist ID",
+            widget: "string"
+        },
+    ],
+    pattern: /^{{< gist ([a-zA-Z0-9]+) ([a-zA-Z0-9]+) >}}/,
+    fromBlock: function(match) {
+        return {
+            username: match[1],
+            gid: match[2],
+        };
+    },
+    toBlock: function(obj) {
+        return `{{< gist ${obj.username} ${obj.gid} >}}`;
+    },
+    toPreview: function(obj) {
+        return '<a href="https://gist.github.com/' + obj.username + '/' + obj.id + '">gist</a>';
+    },
+});
+```
+
+**Result**
+
+![Gist](/img/hugo_shortcode_gist.png "Gist")
+
+For getting started quickly you can refer to this amazing prebuilt resource of [hugo shortcodes editor components](https://github.com/sharadcodes/hugo-shortcodes-netlify-cms)!

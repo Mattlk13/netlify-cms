@@ -12,6 +12,7 @@ import 'codemirror/keymap/sublime';
 import 'codemirror/keymap/emacs';
 import codeMirrorStyles from 'codemirror/lib/codemirror.css';
 import materialTheme from 'codemirror/theme/material.css';
+
 import SettingsPane from './SettingsPane';
 import SettingsButton from './SettingsButton';
 import languageData from '../data/languages.json';
@@ -122,7 +123,7 @@ export default class CodeControl extends React.Component {
   getInitialLang = () => {
     const { value, field } = this.props;
     const lang =
-      (this.valueIsMap() && value && value.get(this.keys.lang)) || field.get('defaultLanguage');
+      (this.valueIsMap() && value && value.get(this.keys.lang)) || field.get('default_language');
     const langInfo = this.getLanguageByName(lang);
     if (lang && !langInfo) {
       this.setState({ unknownLang: lang });
@@ -169,7 +170,7 @@ export default class CodeControl extends React.Component {
     if (changedProps.lang) {
       const { mode } = this.getLanguageByName(changedProps.lang) || {};
       if (mode) {
-        await import(`codemirror/mode/${mode}/${mode}.js`);
+        require(`codemirror/mode/${mode}/${mode}.js`);
       }
     }
 
@@ -275,7 +276,7 @@ export default class CodeControl extends React.Component {
                 overflow: hidden;
 
                 .CodeMirror {
-                  height: auto;
+                  height: auto !important;
                   cursor: text;
                   min-height: 300px;
                 }
