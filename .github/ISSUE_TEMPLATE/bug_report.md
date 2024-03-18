@@ -1,7 +1,8 @@
 ---
 name: Bug report
 about: Report a problem you are experiencing
-
+title: 'Please replace with a clear and descriptive title'
+labels: 'type: bug'
 ---
 
 <!--
@@ -32,7 +33,7 @@ Steps to reproduce the behavior. For example:
 
 **Applicable Versions:**
 <!--You can find the CMS version by checking your web browser's developer tools console while in the CMS. -->
- - Netlify CMS version: [e.g. 2.0.4]
+ - Decap CMS version: [e.g. 2.0.4]
  - Git provider: [e.g. GitHub, BitBucket]
  - OS: [e.g. Windows 7]
  - Browser version [e.g. chrome 22, safari 11]

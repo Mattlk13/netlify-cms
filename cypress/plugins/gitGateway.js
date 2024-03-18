@@ -120,7 +120,7 @@ async function createUser(netlifyApiToken, siteUrl, email, password) {
 }
 
 const netlifySiteURL = 'https://fake-site-url.netlify.com/';
-const email = 'netlifyCMS@netlify.com';
+const email = 'decap@p-m.si';
 const password = '12345678';
 const backendName = 'git-gateway';
 
@@ -302,14 +302,11 @@ async function teardownGitGatewayTest(taskData) {
       transformRecordedData: (expectation, toSanitize) => {
         const result = methods[taskData.provider].transformData(expectation, toSanitize);
 
-        const { httpRequest, httpResponse } = expectation;
-
-        if (httpResponse.body && httpRequest.path === '/.netlify/identity/token') {
-          const parsed = JSON.parse(httpResponse.body);
+        if (result.response && result.url === '/.netlify/identity/token') {
+          const parsed = JSON.parse(result.response);
           parsed.access_token = 'access_token';
           parsed.refresh_token = 'refresh_token';
-          const responseBody = JSON.stringify(parsed);
-          return { ...result, response: responseBody };
+          return { ...result, response: JSON.stringify(parsed) };
         } else {
           return result;
         }
